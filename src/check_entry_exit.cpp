@@ -84,8 +84,12 @@ bool checkEntry(Bitcoin* btcLong, Bitcoin* btcShort, Result& res, Parameters& pa
   // the opportunity found.
   if (!btcLong->getIsImplemented() ||
       !btcShort->getIsImplemented() ||
-      res.spreadIn == 0.0)
+      res.spreadIn == 0.0) {
+      if (params.verbose) {
+          *params.logFile << " Short long not implemented" << std::endl;
+      }
     return false;
+  }
 
   // the trailing spread is reset for this pair,
   // because once the spread is *below*
@@ -94,6 +98,9 @@ bool checkEntry(Bitcoin* btcLong, Bitcoin* btcShort, Result& res, Parameters& pa
   if (res.spreadIn < params.spreadEntry) {
     res.trailing[longId][shortId] = -1.0;
     res.trailingWaitCount[longId][shortId] = 0;
+    if (params.verbose) {
+        *params.logFile << " Below spread entry (reset trails)" << std::endl;
+    }
     return false;
   }
 
@@ -101,20 +108,42 @@ bool checkEntry(Bitcoin* btcLong, Bitcoin* btcShort, Result& res, Parameters& pa
   double newTrailValue = res.spreadIn - params.trailingLim;
   if (res.trailing[longId][shortId] == -1.0) {
     res.trailing[longId][shortId] = std::max(newTrailValue, params.spreadEntry);
+    if (params.verbose) {
+        *params.logFile << " spreadIn is above spreadEntry"
+                " but still we are not in a local maximum" << std::endl;
+    }
     return false;
   }
 
+  //it means that spreadIn >= latest spreadIn which has had an increase
   if (newTrailValue >= res.trailing[longId][shortId]) {
     res.trailing[longId][shortId] = newTrailValue;
+    
+    // I think this line is redundant because this if is a subset of the next if
     res.trailingWaitCount[longId][shortId] = 0;
+    if (params.verbose) {
+        *params.logFile << " Update trailing "
+                "(maxPreviousSpreadIn - trailingLim)" << std::endl;
+    }
   }
   if (res.spreadIn >= res.trailing[longId][shortId]) {
     res.trailingWaitCount[longId][shortId] = 0;
+    if (params.verbose) {
+        *params.logFile << " Still increasing (not a local maximum"
+                " based on trailingLim threshold)" << std::endl;
+    }
     return false;
   }
 
+  // We have to reach this point, 'params.trailingCount + 1' times before 
+  //    we give permission to enter the trade
   if (res.trailingWaitCount[longId][shortId] < params.trailingCount) {
     res.trailingWaitCount[longId][shortId]++;
+    if (params.verbose) {
+        *params.logFile << " Not enough count of trailings: "
+                << res.trailingWaitCount[longId][shortId]
+                << std::endl;
+    }
     return false;
   }
 
