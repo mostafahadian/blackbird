@@ -122,15 +122,15 @@ bool checkEntry(Bitcoin* btcLong, Bitcoin* btcShort, Result& res, Parameters& pa
     // I think this line is redundant because this if is a subset of the next if
     res.trailingWaitCount[longId][shortId] = 0;
     if (params.verbose) {
-        *params.logFile << " Update trailing "
+        *params.logFile << " Still increasing: update trailing "
                 "(maxPreviousSpreadIn - trailingLim)" << std::endl;
     }
   }
   if (res.spreadIn >= res.trailing[longId][shortId]) {
     res.trailingWaitCount[longId][shortId] = 0;
     if (params.verbose) {
-        *params.logFile << " Still increasing (not a local maximum"
-                " based on trailingLim threshold)" << std::endl;
+        *params.logFile << " spreadIn not"
+                " lower than local maximum - trailingLim" << std::endl;
     }
     return false;
   }
